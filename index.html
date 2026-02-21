@@ -218,6 +218,7 @@
         .bar.status-progress { background: linear-gradient(135deg, #d29922, #e3b341); }
         .bar.status-done { background: linear-gradient(135deg, #238636, #3fb950); }
         .bar.status-cancelled { background: linear-gradient(135deg, #6e7681, #484f58); opacity: 0.5; }
+        .bar.status-future { background: linear-gradient(135deg, #1f2937, #374151); border: 1px dashed #6e7681; }
 
         .today-line {
             position: absolute;
@@ -378,6 +379,7 @@
         .modal-status.status-todo { background: #8957e522; color: #a371f7; border: 1px solid #8957e5; }
         .modal-status.status-progress { background: #d2992222; color: #e3b341; border: 1px solid #d29922; }
         .modal-status.status-done { background: #23863622; color: #3fb950; border: 1px solid #238636; }
+        .modal-status.status-future { background: #1f293722; color: #6e7681; border: 1px dashed #6e7681; }
 
         .modal-dates {
             display: grid;
@@ -426,6 +428,7 @@
         <div class="legend-item"><div class="legend-dot" style="background:#8957e5"></div> To Do</div>
         <div class="legend-item"><div class="legend-dot" style="background:#d29922"></div> In Progress</div>
         <div class="legend-item"><div class="legend-dot" style="background:#238636"></div> Done</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#374151; border: 1px dashed #6e7681"></div> Future</div>
         <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Friday Meeting (9:30 AM)</div>
     </div>
 
@@ -521,7 +524,7 @@
                 identifier: 'PRO-1481',
                 title: 'Kernel: Multi-county browser navigation (NY/FL/MI)',
                 description: 'Expand Kernel browser agent to handle payment sites across multiple counties in NY, Florida, and Michigan. Handle varying site structures and payment flows.',
-                status: 'Backlog',
+                status: 'In Progress',
                 assignee: 'Raymond',
                 estimate: '1 week',
                 startWeek: 1,
@@ -535,7 +538,7 @@
                 identifier: 'PRO-1482',
                 title: 'Kernel: Site change detection & automation',
                 description: 'Create monitoring system to detect when county payment sites change. Build automation to understand new site structures without requiring manual prompts.',
-                status: 'Backlog',
+                status: 'In Progress',
                 assignee: 'Raymond',
                 estimate: '1 week',
                 startWeek: 1,
@@ -549,7 +552,7 @@
                 identifier: 'PRO-1484',
                 title: 'OCR: Train model on real parking tickets',
                 description: 'Upload and train local 7B parameter free open-source model on real parking tickets. Extract and correctly identify ticket data for multiple states.',
-                status: 'Backlog',
+                status: 'In Progress',
                 assignee: 'Brian',
                 estimate: '1 week',
                 startWeek: 1,
@@ -563,7 +566,7 @@
                 identifier: 'PRO-1483',
                 title: 'Deliverable: Multi-county payment demo',
                 description: 'Deliver working demo showing successful payments across multiple counties in NY, FL, MI. Document process for handling site structure variations.',
-                status: 'Backlog',
+                status: 'In Progress',
                 assignee: 'Raymond',
                 estimate: '3 days',
                 startWeek: 1,
@@ -579,7 +582,7 @@
                 identifier: 'W3-SCALE',
                 title: 'Scale to all 50 states + all counties',
                 description: 'Expand county coverage from 3 pilot states to all 50 states. Map out county payment portals and build adapters for each site structure.',
-                status: 'Backlog',
+                status: 'Future',
                 assignee: 'TBD',
                 estimate: '2 weeks',
                 startWeek: 2,
@@ -593,7 +596,7 @@
                 identifier: 'W3-MONITOR',
                 title: '24/7 continuous site monitoring',
                 description: 'Deploy always-on monitoring system that detects payment site changes and auto-updates navigation logic. Alert on failures.',
-                status: 'Backlog',
+                status: 'Future',
                 assignee: 'TBD',
                 estimate: '1 week',
                 startWeek: 2,
@@ -607,7 +610,7 @@
                 identifier: 'W3-BILLS',
                 title: 'Expand to general bill payments',
                 description: 'Beyond parking tickets — support utility bills, medical bills, and other payment types. Generalize the OCR + payment pipeline.',
-                status: 'Backlog',
+                status: 'Future',
                 assignee: 'TBD',
                 estimate: '2 weeks',
                 startWeek: 3,
@@ -629,6 +632,7 @@
             if (s === 'in progress') return 'status-progress';
             if (s === 'todo' || s === 'to do') return 'status-todo';
             if (s === 'cancelled') return 'status-cancelled';
+            if (s === 'future') return 'status-future';
             return 'status-backlog';
         }
 
