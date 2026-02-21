@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan & Pay — Project Gantt Chart</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            padding: 24px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #f0f6fc;
+        }
+
+        header h1 span {
+            color: #58a6ff;
+        }
+
+        .last-updated {
+            font-size: 13px;
+            color: #8b949e;
+        }
+
+        .legend {
+            display: flex;
+            gap: 16px;
+            padding: 16px 32px;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #8b949e;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        .gantt-container {
+            padding: 24px 32px;
+            overflow-x: auto;
+        }
+
+        .gantt {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-width: 900px;
+        }
+
+        .gantt-labels {
+            border-right: 1px solid #30363d;
+        }
+
+        .gantt-header-label {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .gantt-row-label {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid #21262d;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .gantt-row-label:hover {
+            background: #161b22;
+        }
+
+        .gantt-row-label .ticket-id {
+            font-size: 12px;
+            font-weight: 600;
+            color: #58a6ff;
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+
+        .gantt-row-label .ticket-title {
+            font-size: 13px;
+            color: #c9d1d9;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .gantt-timeline {
+            position: relative;
+        }
+
+        .gantt-header-timeline {
+            height: 48px;
+            display: flex;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .week-header {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: #8b949e;
+            border-right: 1px solid #30363d;
+            position: relative;
+        }
+
+        .week-header:last-child { border-right: none; }
+
+        .week-header .week-dates {
+            font-size: 11px;
+            font-weight: 400;
+            color: #484f58;
+            margin-left: 8px;
+        }
+
+        .gantt-row-timeline {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #21262d;
+            position: relative;
+        }
+
+        .week-column {
+            flex: 1;
+            height: 100%;
+            border-right: 1px solid #21262d;
+            position: relative;
+        }
+
+        .week-column:last-child { border-right: none; }
+
+        .bar {
+            position: absolute;
+            height: 28px;
+            border-radius: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            transition: filter 0.15s, transform 0.15s;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 2;
+        }
+
+        .bar:hover {
+            filter: brightness(1.2);
+            transform: translateY(-50%) scale(1.02);
+        }
+
+        .bar.status-backlog { background: linear-gradient(135deg, #484f58, #6e7681); }
+        .bar.status-todo { background: linear-gradient(135deg, #8957e5, #a371f7); }
+        .bar.status-progress { background: linear-gradient(135deg, #d29922, #e3b341); }
+        .bar.status-done { background: linear-gradient(135deg, #238636, #3fb950); }
+        .bar.status-cancelled { background: linear-gradient(135deg, #6e7681, #484f58); opacity: 0.5; }
+
+        .today-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #f85149;
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .today-line::before {
+            content: 'TODAY';
+            position: absolute;
+            top: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            font-weight: 700;
+            color: #f85149;
+            letter-spacing: 1px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 28px;
+            max-width: 520px;
+            width: 90%;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .modal-id {
+            font-size: 13px;
+            font-weight: 700;
+            color: #58a6ff;
+            margin-bottom: 4px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #f0f6fc;
+            line-height: 1.3;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #8b949e;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px 8px;
+            line-height: 1;
+            border-radius: 6px;
+        }
+
+        .modal-close:hover {
+            background: #21262d;
+            color: #f0f6fc;
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .modal-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .modal-field-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .modal-field-value {
+            font-size: 14px;
+            color: #c9d1d9;
+            line-height: 1.5;
+        }
+
+        .modal-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            width: fit-content;
+        }
+
+        .modal-status.status-backlog { background: #484f5822; color: #8b949e; border: 1px solid #484f58; }
+        .modal-status.status-todo { background: #8957e522; color: #a371f7; border: 1px solid #8957e5; }
+        .modal-status.status-progress { background: #d2992222; color: #e3b341; border: 1px solid #d29922; }
+        .modal-status.status-done { background: #23863622; color: #3fb950; border: 1px solid #238636; }
+
+        .modal-dates {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .modal-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* Week group headers */
+        .week-group-label {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #58a6ff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .week-group-timeline {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎫 Scan <span>&</span> Pay — Project Timeline</h1>
+        <div class="last-updated">Last updated: <span id="updated-date"></span></div>
+    </header>
+
+    <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#6e7681"></div> Backlog</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8957e5"></div> To Do</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#d29922"></div> In Progress</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#238636"></div> Done</div>
+    </div>
+
+    <div class="gantt-container">
+        <div class="gantt" id="gantt"></div>
+    </div>
+
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-id" id="modal-id"></div>
+                    <div class="modal-title" id="modal-title"></div>
+                </div>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <div class="modal-field-label">Status</div>
+                    <div id="modal-status"></div>
+                </div>
+                <div class="modal-field">
+                    <div class="modal-field-label">Description</div>
+                    <div class="modal-field-value" id="modal-desc"></div>
+                </div>
+                <div class="modal-meta">
+                    <div class="modal-field">
+                        <div class="modal-field-label">Assignee</div>
+                        <div class="modal-field-value" id="modal-assignee"></div>
+                    </div>
+                    <div class="modal-field">
+                        <div class="modal-field-label">Estimate</div>
+                        <div class="modal-field-value" id="modal-estimate"></div>
+                    </div>
+                </div>
+                <div class="modal-dates">
+                    <div class="modal-field">
+                        <div class="modal-field-label">Start Date</div>
+                        <div class="modal-field-value" id="modal-start"></div>
+                    </div>
+                    <div class="modal-field">
+                        <div class="modal-field-label">End Date</div>
+                        <div class="modal-field-value" id="modal-end"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================
+        // TICKET DATA — Updated weekly on Thursdays
+        // Last update: 2026-02-21
+        // =====================================================
+        const LAST_UPDATED = '2026-02-21';
+
+        // Project timeline: 4 weeks
+        const WEEKS = [
+            { label: 'Week 1', start: '2026-02-14', end: '2026-02-20', dates: 'Feb 14–20' },
+            { label: 'Week 2', start: '2026-02-21', end: '2026-02-27', dates: 'Feb 21–27' },
+            { label: 'Week 3', start: '2026-02-28', end: '2026-03-06', dates: 'Feb 28–Mar 6' },
+            { label: 'Week 4', start: '2026-03-07', end: '2026-03-13', dates: 'Mar 7–13' },
+        ];
+
+        const TICKETS = [
+            // Week 1 (Complete)
+            {
+                id: 'W1',
+                identifier: 'W1-MVP',
+                title: 'NYC Parking Ticket Payment MVP',
+                description: 'Initial MVP for NYC parking ticket payments. Raymond built Kernel browser integration with manual payment submission. OpenAI OCR used for ticket scanning.',
+                status: 'Done',
+                assignee: 'Raymond',
+                estimate: '1 week',
+                startWeek: 0,
+                endWeek: 0,
+                startDate: '2026-02-14',
+                endDate: '2026-02-20',
+                group: 'Week 1 — MVP'
+            },
+
+            // Week 2
+            {
+                id: 'PRO-1481',
+                identifier: 'PRO-1481',
+                title: 'Kernel: Multi-county browser navigation (NY/FL/MI)',
+                description: 'Expand Kernel browser agent to handle payment sites across multiple counties in NY, Florida, and Michigan. Handle varying site structures and payment flows.',
+                status: 'Backlog',
+                assignee: 'Raymond',
+                estimate: '1 week',
+                startWeek: 1,
+                endWeek: 1,
+                startDate: '2026-02-21',
+                endDate: '2026-02-27',
+                group: 'Week 2 — Multi-State Expansion'
+            },
+            {
+                id: 'PRO-1482',
+                identifier: 'PRO-1482',
+                title: 'Kernel: Site change detection & automation',
+                description: 'Create monitoring system to detect when county payment sites change. Build automation to understand new site structures without requiring manual prompts.',
+                status: 'Backlog',
+                assignee: 'Raymond',
+                estimate: '1 week',
+                startWeek: 1,
+                endWeek: 2,
+                startDate: '2026-02-21',
+                endDate: '2026-03-06',
+                group: 'Week 2 — Multi-State Expansion'
+            },
+            {
+                id: 'PRO-1484',
+                identifier: 'PRO-1484',
+                title: 'OCR: Train model on real parking tickets',
+                description: 'Upload and train local 7B parameter free open-source model on real parking tickets. Extract and correctly identify ticket data for multiple states.',
+                status: 'Backlog',
+                assignee: 'Brian',
+                estimate: '1 week',
+                startWeek: 1,
+                endWeek: 1,
+                startDate: '2026-02-21',
+                endDate: '2026-02-27',
+                group: 'Week 2 — Multi-State Expansion'
+            },
+            {
+                id: 'PRO-1483',
+                identifier: 'PRO-1483',
+                title: 'Deliverable: Multi-county payment demo',
+                description: 'Deliver working demo showing successful payments across multiple counties in NY, FL, MI. Document process for handling site structure variations.',
+                status: 'Backlog',
+                assignee: 'Raymond',
+                estimate: '3 days',
+                startWeek: 1,
+                endWeek: 1,
+                startDate: '2026-02-25',
+                endDate: '2026-02-27',
+                group: 'Week 2 — Multi-State Expansion'
+            },
+
+            // Week 3
+            {
+                id: 'W3-SCALE',
+                identifier: 'W3-SCALE',
+                title: 'Scale to all 50 states + all counties',
+                description: 'Expand county coverage from 3 pilot states to all 50 states. Map out county payment portals and build adapters for each site structure.',
+                status: 'Backlog',
+                assignee: 'TBD',
+                estimate: '2 weeks',
+                startWeek: 2,
+                endWeek: 3,
+                startDate: '2026-02-28',
+                endDate: '2026-03-13',
+                group: 'Week 3–4 — Scale & Monitor'
+            },
+            {
+                id: 'W3-MONITOR',
+                identifier: 'W3-MONITOR',
+                title: '24/7 continuous site monitoring',
+                description: 'Deploy always-on monitoring system that detects payment site changes and auto-updates navigation logic. Alert on failures.',
+                status: 'Backlog',
+                assignee: 'TBD',
+                estimate: '1 week',
+                startWeek: 2,
+                endWeek: 3,
+                startDate: '2026-02-28',
+                endDate: '2026-03-13',
+                group: 'Week 3–4 — Scale & Monitor'
+            },
+            {
+                id: 'W3-BILLS',
+                identifier: 'W3-BILLS',
+                title: 'Expand to general bill payments',
+                description: 'Beyond parking tickets — support utility bills, medical bills, and other payment types. Generalize the OCR + payment pipeline.',
+                status: 'Backlog',
+                assignee: 'TBD',
+                estimate: '2 weeks',
+                startWeek: 3,
+                endWeek: 3,
+                startDate: '2026-03-07',
+                endDate: '2026-03-13',
+                group: 'Week 3–4 — Scale & Monitor'
+            },
+        ];
+
+        // =====================================================
+        // RENDERING
+        // =====================================================
+        document.getElementById('updated-date').textContent = LAST_UPDATED;
+
+        function statusClass(status) {
+            const s = status.toLowerCase();
+            if (s === 'done') return 'status-done';
+            if (s === 'in progress') return 'status-progress';
+            if (s === 'todo' || s === 'to do') return 'status-todo';
+            if (s === 'cancelled') return 'status-cancelled';
+            return 'status-backlog';
+        }
+
+        function renderGantt() {
+            const gantt = document.getElementById('gantt');
+            let labelsHTML = '<div class="gantt-labels"><div class="gantt-header-label">Tickets</div>';
+            let timelineHTML = '<div class="gantt-timeline"><div class="gantt-header-timeline">';
+
+            // Week headers
+            WEEKS.forEach(w => {
+                timelineHTML += `<div class="week-header">${w.label}<span class="week-dates">${w.dates}</span></div>`;
+            });
+            timelineHTML += '</div>';
+
+            // Group tickets
+            let currentGroup = '';
+            TICKETS.forEach((ticket, i) => {
+                if (ticket.group !== currentGroup) {
+                    currentGroup = ticket.group;
+                    labelsHTML += `<div class="week-group-label">${currentGroup}</div>`;
+                    timelineHTML += `<div class="week-group-timeline">`;
+                    WEEKS.forEach(() => { timelineHTML += `<div class="week-column"></div>`; });
+                    timelineHTML += `</div>`;
+                }
+
+                // Label
+                labelsHTML += `<div class="gantt-row-label" data-ticket="${i}">
+                    <span class="ticket-id">${ticket.identifier}</span>
+                    <span class="ticket-title">${ticket.title}</span>
+                </div>`;
+
+                // Timeline row
+                timelineHTML += `<div class="gantt-row-timeline">`;
+                WEEKS.forEach(() => { timelineHTML += `<div class="week-column"></div>`; });
+
+                // Bar
+                const startPct = (ticket.startWeek / WEEKS.length) * 100;
+                const widthPct = ((ticket.endWeek - ticket.startWeek + 1) / WEEKS.length) * 100;
+                timelineHTML += `<div class="bar ${statusClass(ticket.status)}" data-ticket="${i}"
+                    style="left:${startPct}%; width:${widthPct}%;">
+                    ${ticket.title}
+                </div>`;
+
+                timelineHTML += `</div>`;
+            });
+
+            labelsHTML += '</div>';
+            timelineHTML += '</div>';
+
+            gantt.innerHTML = labelsHTML + timelineHTML;
+
+            // Today line
+            const today = new Date();
+            const projectStart = new Date(WEEKS[0].start);
+            const projectEnd = new Date(WEEKS[WEEKS.length - 1].end);
+            if (today >= projectStart && today <= projectEnd) {
+                const totalDays = (projectEnd - projectStart) / (1000 * 60 * 60 * 24);
+                const daysSinceStart = (today - projectStart) / (1000 * 60 * 60 * 24);
+                const pct = (daysSinceStart / totalDays) * 100;
+                const timeline = gantt.querySelector('.gantt-timeline');
+                const line = document.createElement('div');
+                line.className = 'today-line';
+                line.style.left = pct + '%';
+                timeline.appendChild(line);
+            }
+
+            // Click handlers
+            gantt.querySelectorAll('[data-ticket]').forEach(el => {
+                el.addEventListener('click', () => openModal(TICKETS[el.dataset.ticket]));
+            });
+        }
+
+        // =====================================================
+        // MODAL
+        // =====================================================
+        const overlay = document.getElementById('modal-overlay');
+        const closeBtn = document.getElementById('modal-close');
+
+        function openModal(ticket) {
+            document.getElementById('modal-id').textContent = ticket.identifier;
+            document.getElementById('modal-title').textContent = ticket.title;
+            document.getElementById('modal-desc').textContent = ticket.description || 'No description';
+            document.getElementById('modal-assignee').textContent = ticket.assignee || 'Unassigned';
+            document.getElementById('modal-estimate').textContent = ticket.estimate || 'Not estimated';
+            document.getElementById('modal-start').textContent = ticket.startDate || 'Not set';
+            document.getElementById('modal-end').textContent = ticket.endDate || 'Not set';
+
+            const statusEl = document.getElementById('modal-status');
+            statusEl.innerHTML = `<div class="modal-status ${statusClass(ticket.status)}">${ticket.status}</div>`;
+
+            overlay.classList.add('active');
+        }
+
+        closeBtn.addEventListener('click', () => overlay.classList.remove('active'));
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) overlay.classList.remove('active');
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') overlay.classList.remove('active');
+        });
+
+        renderGantt();
+    </script>
+</body>
+</html>
