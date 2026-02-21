@@ -241,6 +241,40 @@
             letter-spacing: 1px;
         }
 
+        .meeting-marker {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(88, 166, 255, 0.3);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .meeting-marker::before {
+            content: attr(data-label);
+            position: absolute;
+            top: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 9px;
+            font-weight: 600;
+            color: #58a6ff;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .meeting-diamond {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 8px;
+            height: 8px;
+            background: #58a6ff;
+            z-index: 4;
+        }
+
         /* Modal */
         .modal-overlay {
             display: none;
@@ -392,6 +426,7 @@
         <div class="legend-item"><div class="legend-dot" style="background:#8957e5"></div> To Do</div>
         <div class="legend-item"><div class="legend-dot" style="background:#d29922"></div> In Progress</div>
         <div class="legend-item"><div class="legend-dot" style="background:#238636"></div> Done</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Friday Meeting (9:30 AM)</div>
     </div>
 
     <div class="gantt-container">
@@ -453,6 +488,14 @@
             { label: 'Week 2', start: '2026-02-21', end: '2026-02-27', dates: 'Feb 21–27' },
             { label: 'Week 3', start: '2026-02-28', end: '2026-03-06', dates: 'Feb 28–Mar 6' },
             { label: 'Week 4', start: '2026-03-07', end: '2026-03-13', dates: 'Mar 7–13' },
+        ];
+
+        // Friday 9:30 AM standup meetings
+        const MEETINGS = [
+            { date: '2026-02-21', label: '📅 Fri 9:30a' },
+            { date: '2026-02-28', label: '📅 Fri 9:30a' },
+            { date: '2026-03-07', label: '📅 Fri 9:30a' },
+            { date: '2026-03-13', label: '📅 Fri 9:30a' },
         ];
 
         const TICKETS = [
@@ -651,6 +694,27 @@
                 line.style.left = pct + '%';
                 timeline.appendChild(line);
             }
+
+            // Meeting markers
+            const timelineEl = gantt.querySelector('.gantt-timeline');
+            MEETINGS.forEach(m => {
+                const mDate = new Date(m.date + 'T09:30:00');
+                const pStart = new Date(WEEKS[0].start);
+                const pEnd = new Date(WEEKS[WEEKS.length - 1].end);
+                if (mDate >= pStart && mDate <= pEnd) {
+                    const totalDays = (pEnd - pStart) / (1000 * 60 * 60 * 24);
+                    const daysSince = (mDate - pStart) / (1000 * 60 * 60 * 24);
+                    const pct = (daysSince / totalDays) * 100;
+                    const marker = document.createElement('div');
+                    marker.className = 'meeting-marker';
+                    marker.style.left = pct + '%';
+                    marker.setAttribute('data-label', m.label);
+                    const diamond = document.createElement('div');
+                    diamond.className = 'meeting-diamond';
+                    marker.appendChild(diamond);
+                    timelineEl.appendChild(marker);
+                }
+            });
 
             // Click handlers
             gantt.querySelectorAll('[data-ticket]').forEach(el => {
