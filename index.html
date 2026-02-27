@@ -380,6 +380,7 @@
         .modal-status.status-progress { background: #d2992222; color: #e3b341; border: 1px solid #d29922; }
         .modal-status.status-done { background: #23863622; color: #3fb950; border: 1px solid #238636; }
         .modal-status.status-future { background: #1f293722; color: #6e7681; border: 1px dashed #6e7681; }
+        .modal-status.status-epic { background: #1f6feb22; color: #58a6ff; border: 1px solid #1f6feb; }
 
         .modal-dates {
             display: grid;
@@ -415,6 +416,87 @@
             background: #161b22;
             border-bottom: 1px solid #30363d;
         }
+
+        /* Epic bar */
+        .bar.status-epic {
+            background: linear-gradient(135deg, #1f6feb, #388bfd);
+            border: 2px solid #58a6ff;
+            opacity: 0.6;
+        }
+
+        /* Future backlog section */
+        .future-section {
+            padding: 24px 32px;
+            border-top: 1px solid #30363d;
+        }
+
+        .future-section h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .future-section h2::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            background: #374151;
+            border: 1px dashed #6e7681;
+        }
+
+        .future-card {
+            background: #161b22;
+            border: 1px dashed #30363d;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 10px;
+            cursor: grab;
+            transition: background 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+            user-select: none;
+        }
+
+        .future-card:hover {
+            background: #1c2129;
+            border-color: #484f58;
+        }
+
+        .future-card.dragging {
+            opacity: 0.4;
+            transform: scale(0.98);
+        }
+
+        .future-card.drag-over {
+            border-color: #58a6ff;
+            background: #1f6feb15;
+        }
+
+        .future-card .future-id {
+            font-size: 12px;
+            font-weight: 700;
+            color: #6e7681;
+            margin-bottom: 4px;
+        }
+
+        .future-card .future-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #c9d1d9;
+            margin-bottom: 6px;
+        }
+
+        .future-card .future-desc {
+            font-size: 13px;
+            color: #8b949e;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -428,13 +510,16 @@
         <div class="legend-item"><div class="legend-dot" style="background:#8957e5"></div> To Do</div>
         <div class="legend-item"><div class="legend-dot" style="background:#d29922"></div> In Progress</div>
         <div class="legend-item"><div class="legend-dot" style="background:#238636"></div> Done</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1f6feb; border: 2px solid #58a6ff"></div> Epic</div>
         <div class="legend-item"><div class="legend-dot" style="background:#374151; border: 1px dashed #6e7681"></div> Future</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Friday Meeting (9:30 AM)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Friday Meeting (9:30 AM EST)</div>
     </div>
 
     <div class="gantt-container">
         <div class="gantt" id="gantt"></div>
     </div>
+
+    <div class="future-section" id="future-section"></div>
 
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal" id="modal">
@@ -480,10 +565,10 @@
 
     <script>
         // =====================================================
-        // TICKET DATA — Updated weekly on Thursdays
-        // Last update: 2026-02-21
+        // TICKET DATA — Updated weekly
+        // Last update: 2026-02-27
         // =====================================================
-        const LAST_UPDATED = '2026-02-21';
+        const LAST_UPDATED = '2026-02-27';
 
         // Project timeline: 4 weeks
         const WEEKS = [
@@ -495,14 +580,14 @@
 
         // Friday 9:30 AM standup meetings
         const MEETINGS = [
-            { date: '2026-02-21', label: '📅 Fri 9:30a' },
-            { date: '2026-02-28', label: '📅 Fri 9:30a' },
-            { date: '2026-03-07', label: '📅 Fri 9:30a' },
-            { date: '2026-03-13', label: '📅 Fri 9:30a' },
+            { date: '2026-02-21', label: '📅 Fri 9:30a EST' },
+            { date: '2026-02-28', label: '📅 Fri 9:30a EST' },
+            { date: '2026-03-07', label: '📅 Fri 9:30a EST' },
+            { date: '2026-03-13', label: '📅 Fri 9:30a EST' },
         ];
 
         const TICKETS = [
-            // Week 1 (Complete)
+            // ── Week 1 (Complete) ──
             {
                 id: 'W1',
                 identifier: 'W1-MVP',
@@ -518,13 +603,13 @@
                 group: 'Week 1 — MVP'
             },
 
-            // Week 2
+            // ── Week 2 (Complete) ──
             {
                 id: 'PRO-1481',
                 identifier: 'PRO-1481',
                 title: 'Kernel: Multi-county browser navigation (NY/FL/MI)',
-                description: 'Expand Kernel browser agent to handle payment sites across multiple counties in NY, Florida, and Michigan. Handle varying site structures and payment flows.',
-                status: 'In Progress',
+                description: 'Expanded Kernel browser agent to handle payment sites across multiple counties in NY, Florida, and Michigan. Handled varying site structures and payment flows.',
+                status: 'Done',
                 assignee: 'Raymond',
                 estimate: '1 week',
                 startWeek: 1,
@@ -537,22 +622,22 @@
                 id: 'PRO-1482',
                 identifier: 'PRO-1482',
                 title: 'Kernel: Site change detection & automation',
-                description: 'Create monitoring system to detect when county payment sites change. Build automation to understand new site structures without requiring manual prompts.',
-                status: 'In Progress',
+                description: 'Created monitoring system to detect when county payment sites change. Built automation to understand new site structures without requiring manual prompts.',
+                status: 'Done',
                 assignee: 'Raymond',
                 estimate: '1 week',
                 startWeek: 1,
-                endWeek: 2,
+                endWeek: 1,
                 startDate: '2026-02-21',
-                endDate: '2026-03-06',
+                endDate: '2026-02-27',
                 group: 'Week 2 — Multi-State Expansion'
             },
             {
                 id: 'PRO-1484',
                 identifier: 'PRO-1484',
                 title: 'OCR: Train model on real parking tickets',
-                description: 'Upload and train local 7B parameter free open-source model on real parking tickets. Extract and correctly identify ticket data for multiple states.',
-                status: 'In Progress',
+                description: 'Uploaded and trained local 7B parameter free open-source model on real parking tickets. Extract and correctly identify ticket data for multiple states.',
+                status: 'Done',
                 assignee: 'Brian',
                 estimate: '1 week',
                 startWeek: 1,
@@ -565,8 +650,8 @@
                 id: 'PRO-1483',
                 identifier: 'PRO-1483',
                 title: 'Deliverable: Multi-county payment demo',
-                description: 'Deliver working demo showing successful payments across multiple counties in NY, FL, MI. Document process for handling site structure variations.',
-                status: 'In Progress',
+                description: 'Delivered working demo showing successful payments across multiple counties in NY, FL, MI. Documented process for handling site structure variations.',
+                status: 'Done',
                 assignee: 'Raymond',
                 estimate: '3 days',
                 startWeek: 1,
@@ -576,20 +661,121 @@
                 group: 'Week 2 — Multi-State Expansion'
             },
 
-            // Week 3
+            // ── MVP EPIC (Week 2–4) ──
             {
-                id: 'W3-SCALE',
-                identifier: 'W3-SCALE',
-                title: 'Scale to all 50 states + all counties',
-                description: 'Expand county coverage from 3 pilot states to all 50 states. Map out county payment portals and build adapters for each site structure.',
-                status: 'Future',
-                assignee: 'TBD',
+                id: 'EPIC-MVP',
+                identifier: 'EPIC-MVP',
+                title: 'NYC CityPay MVP — End-to-End Payment Flow',
+                description: 'Epic: Full MVP for NYC CityPay parking ticket payments. Encompasses browser agent navigation, OCR scraping, CAPTCHA solving, payment UI, card storage, and Apple Pay integration. Goal is to reliably pay any NYC parking ticket through CityPay.',
+                status: 'Epic',
+                assignee: 'Team',
+                estimate: '3 weeks',
+                startWeek: 1,
+                endWeek: 3,
+                startDate: '2026-02-21',
+                endDate: '2026-03-13',
+                group: 'NYC CityPay MVP (Epic — Week 2–4)'
+            },
+
+            // ── Week 3–4: NYC CityPay Focus ──
+            {
+                id: 'PRO-1501',
+                identifier: 'PRO-1501',
+                title: 'Enhance browser agent navigation for NYC CityPay',
+                description: 'Improve the Kernel browser agent to reliably navigate NYC CityPay for all ticket types. Handle edge cases, different violation categories, and payment flow variations. The agent should pass through the full NYC CityPay flow end-to-end without failure.',
+                status: 'In Progress',
+                assignee: 'Raymond',
                 estimate: '2 weeks',
                 startWeek: 2,
                 endWeek: 3,
                 startDate: '2026-02-28',
                 endDate: '2026-03-13',
-                group: 'Week 3–4 — Scale & Monitor'
+                group: 'Week 3–4 — NYC CityPay Focus'
+            },
+            {
+                id: 'PRO-1502',
+                identifier: 'PRO-1502',
+                title: 'Improve OCR & prompt scraping for NYC CityPay tickets',
+                description: 'Refine OCR pipeline and prompt-based scraping specifically for NYC CityPay ticket formats. Improve accuracy of extracting violation numbers, amounts, plate info, and dates. Focus exclusively on NYC CityPay data structures.',
+                status: 'In Progress',
+                assignee: 'Brian',
+                estimate: '2 weeks',
+                startWeek: 2,
+                endWeek: 3,
+                startDate: '2026-02-28',
+                endDate: '2026-03-13',
+                group: 'Week 3–4 — NYC CityPay Focus'
+            },
+            {
+                id: 'PRO-1503',
+                identifier: 'PRO-1503',
+                title: 'Improve CAPTCHA passing with enhanced image cropping',
+                description: 'Improve CAPTCHA solve rate on NYC CityPay by implementing better image cropping, preprocessing, and recognition. Focus on the specific CAPTCHA types used by NYC CityPay.',
+                status: 'To Do',
+                assignee: 'Raymond',
+                estimate: '1 week',
+                startWeek: 2,
+                endWeek: 2,
+                startDate: '2026-02-28',
+                endDate: '2026-03-06',
+                group: 'Week 3–4 — NYC CityPay Focus'
+            },
+            {
+                id: 'PRO-1504',
+                identifier: 'PRO-1504',
+                title: 'UI: Collect customer address & card information',
+                description: 'Build UI forms to collect customer billing address and payment card details. Clean, validated inputs with proper formatting. Integrate into the payment flow before submission.',
+                status: 'In Progress',
+                assignee: 'TBD',
+                estimate: '1 week',
+                startWeek: 2,
+                endWeek: 2,
+                startDate: '2026-02-28',
+                endDate: '2026-03-06',
+                group: 'Week 3–4 — NYC CityPay Focus'
+            },
+            {
+                id: 'PRO-1505',
+                identifier: 'PRO-1505',
+                title: 'Setup secure card information storage',
+                description: 'Implement secure storage for customer payment card information. Encrypt at rest, handle tokenization, and ensure PCI compliance basics. Allow returning customers to reuse saved cards.',
+                status: 'To Do',
+                assignee: 'TBD',
+                estimate: '1 week',
+                startWeek: 2,
+                endWeek: 3,
+                startDate: '2026-02-28',
+                endDate: '2026-03-13',
+                group: 'Week 3–4 — NYC CityPay Focus'
+            },
+            {
+                id: 'PRO-1506',
+                identifier: 'PRO-1506',
+                title: 'Enable Apple Pay with service fee',
+                description: 'Research and integrate Apple Pay as a payment method. Charge a convenience fee for using Apple Pay. Investigate Apple Pay for Web requirements, merchant setup, and fee structure implementation.',
+                status: 'In Progress',
+                assignee: 'TBD',
+                estimate: '1 week',
+                startWeek: 2,
+                endWeek: 2,
+                startDate: '2026-02-28',
+                endDate: '2026-03-06',
+                group: 'Week 3–4 — NYC CityPay Focus'
+            },
+        ];
+
+        // =====================================================
+        // FUTURE BACKLOG — Removed from timeline
+        // =====================================================
+        const FUTURE_TICKETS = [
+            {
+                id: 'W3-SCALE',
+                identifier: 'W3-SCALE',
+                title: 'Scale to all 50 states + all counties',
+                description: 'Expand county coverage from pilot states to all 50 states. Map out county payment portals and build adapters for each site structure.',
+                status: 'Future',
+                assignee: 'TBD',
+                estimate: 'TBD',
             },
             {
                 id: 'W3-MONITOR',
@@ -598,12 +784,7 @@
                 description: 'Deploy always-on monitoring system that detects payment site changes and auto-updates navigation logic. Alert on failures.',
                 status: 'Future',
                 assignee: 'TBD',
-                estimate: '1 week',
-                startWeek: 2,
-                endWeek: 3,
-                startDate: '2026-02-28',
-                endDate: '2026-03-13',
-                group: 'Week 3–4 — Scale & Monitor'
+                estimate: 'TBD',
             },
             {
                 id: 'W3-BILLS',
@@ -612,12 +793,7 @@
                 description: 'Beyond parking tickets — support utility bills, medical bills, and other payment types. Generalize the OCR + payment pipeline.',
                 status: 'Future',
                 assignee: 'TBD',
-                estimate: '2 weeks',
-                startWeek: 3,
-                endWeek: 3,
-                startDate: '2026-03-07',
-                endDate: '2026-03-13',
-                group: 'Week 3–4 — Scale & Monitor'
+                estimate: 'TBD',
             },
         ];
 
@@ -633,6 +809,7 @@
             if (s === 'todo' || s === 'to do') return 'status-todo';
             if (s === 'cancelled') return 'status-cancelled';
             if (s === 'future') return 'status-future';
+            if (s === 'epic') return 'status-epic';
             return 'status-backlog';
         }
 
@@ -755,7 +932,71 @@
             if (e.key === 'Escape') overlay.classList.remove('active');
         });
 
+        // =====================================================
+        // FUTURE SECTION
+        // =====================================================
+        let dragSrcIndex = null;
+
+        function renderFuture() {
+            const section = document.getElementById('future-section');
+            if (!FUTURE_TICKETS.length) return;
+
+            let html = '<h2>Future Backlog</h2>';
+            FUTURE_TICKETS.forEach((ticket, i) => {
+                html += `<div class="future-card" draggable="true" data-future="${i}">
+                    <div class="future-id">${ticket.identifier}</div>
+                    <div class="future-title">${ticket.title}</div>
+                    <div class="future-desc">${ticket.description}</div>
+                </div>`;
+            });
+            section.innerHTML = html;
+
+            section.querySelectorAll('[data-future]').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    if (!el.classList.contains('dragging')) {
+                        openModal(FUTURE_TICKETS[el.dataset.future]);
+                    }
+                });
+
+                el.addEventListener('dragstart', (e) => {
+                    dragSrcIndex = parseInt(el.dataset.future);
+                    el.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                el.addEventListener('dragend', () => {
+                    el.classList.remove('dragging');
+                    section.querySelectorAll('.future-card').forEach(c => c.classList.remove('drag-over'));
+                });
+
+                el.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    const target = el.closest('.future-card');
+                    if (target && parseInt(target.dataset.future) !== dragSrcIndex) {
+                        section.querySelectorAll('.future-card').forEach(c => c.classList.remove('drag-over'));
+                        target.classList.add('drag-over');
+                    }
+                });
+
+                el.addEventListener('dragleave', () => {
+                    el.classList.remove('drag-over');
+                });
+
+                el.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const dropIndex = parseInt(el.dataset.future);
+                    if (dragSrcIndex === null || dragSrcIndex === dropIndex) return;
+
+                    const moved = FUTURE_TICKETS.splice(dragSrcIndex, 1)[0];
+                    FUTURE_TICKETS.splice(dropIndex, 0, moved);
+                    renderFuture();
+                });
+            });
+        }
+
         renderGantt();
+        renderFuture();
     </script>
 </body>
 </html>
